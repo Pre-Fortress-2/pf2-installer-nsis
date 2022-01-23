@@ -6,6 +6,7 @@
 ; Include Modern UI
 
 !include "MUI2.nsh"
+!include "strreplace.nsh"
 
 ; --------------------------------
 ; General
@@ -34,6 +35,7 @@ RequestExecutionLevel user
 ; Variables
 
 Var StartMenuFolder
+Var STEAMEXE
 
 ; --------------------------------
 ; Interface Settings
@@ -77,14 +79,16 @@ Var StartMenuFolder
 
 ; --------------------------------
 ; check for SourceModInstallPath
-Function getSourcemodsInstall
+Function getRegKeys
 	ClearErrors
-	ReadRegStr $0 HKCU "SOFTWARE\Valve\Steam\" "SourceModInstallPath"
+	ReadRegStr $0 HKCU "Software\Valve\Steam\" "SteamExe"
+	ReadRegStr $1 HKCU "Software\Valve\Steam\" "SourceModInstallPath"
 	${If} ${Errors}
 		MessageBox MB_OK "Installation cancelled! Steam is not detected on this machine."
 		Abort
 	${Else}
-		StrCpy $INSTDIR "$0\"
+		${StrRep} '$STEAMEXE' '$0' '/' '\'
+		StrCpy $INSTDIR "$1\"
 	${EndIf}
 	;MessageBox MB_OK $INSTDIR
 FunctionEnd
@@ -111,21 +115,6 @@ FunctionEnd
 !endif
 
 ; --------------------------------
-; try and read version.txt to pull "version=0.6 OPEN BETA"
-;Function checkVerLegacy
-;	IfFileExists $INSTDIR\${GAMENAME}\version.txt VerLegacyExists
-;		MessageBox MB_OK "${GAMENAME} is not currently installed on this machine.$\nPlease use the $\"full$\" installer"
-;		Abort
-;	VerLegacyExists:
-;	;Read rev
-;	FileOpen $4 "$INSTDIR\${GAMENAME}\version.txt" r
-;	FileRead $4 $1
-;	FileClose $4 ; and close the file
-;	StrCmp $1 "version=0.6 OPEN BETA" 0 +2
-;	MessageBox MB_OK "This version of ${GAMENAME} already installed."
-;FunctionEnd
-
-; --------------------------------
 ; verify the 7z archive exists
 Function checkGameArchiveExists
 	IfFileExists "$EXEDIR\${ARCHIVENAME}" ArchiveExists
@@ -137,7 +126,6 @@ Function checkGameArchiveExists
 	ArchiveExists:
 FunctionEnd
 
-
 ; --------------------------------
 ; OnInit
 Function .onInit
@@ -147,14 +135,14 @@ Function .onInit
 	ReadRegStr $0 HKCU "SOFTWARE\${COMPANYNAME}\" ""
 	${If} ${Errors}
 		; Didn't find the registry key, maybe they're updating ontop of an existing install
-		Call getSourcemodsInstall
+		Call getRegKeys
 		; Look for version.txt in game directory
 		Call checkVer
 	${Else}
 		StrCpy $INSTDIR "$0\"
 	${EndIf}
 !else
-	Call getSourcemodsInstall
+	Call getRegKeys
 !endif
 
 FunctionEnd
@@ -181,12 +169,14 @@ Section "Dummy Section" SecDummy
 	; Create uninstaller
 	WriteUninstaller "$INSTDIR\${GAMEDIR}\Uninstall.exe"
 	
-	;!insertmacro MUI_STARTMENU_WRITE_BEGIN Application
-
+	!insertmacro MUI_STARTMENU_WRITE_BEGIN Application
 	; Create shortcuts
-	;CreateDirectory "$SMPROGRAMS\${GAMENAME}"
-	;CreateShortcut "$SMPROGRAMS\${GAMENAME}\Uninstall PF2.lnk" "$INSTDIR\${GAMEDIR}\Uninstall.exe"
-	;!insertmacro MUI_STARTMENU_WRITE_END
+	CreateDirectory "$SMPROGRAMS\${GAMENAME}"
+	CreateShortcut "$SMPROGRAMS\${GAMENAME}\Uninstall PF2.lnk" "$INSTDIR\${GAMEDIR}\Uninstall.exe"
+	; TODO; Need to instead go to the steam directory. Go to steamapps. Read libraryfolders.vdf. Find the folder with 243750
+	; Construct a path to the install. Then make the shortcut include -steam. Because fuck valve
+	CreateShortcut "$SMPROGRAMS\${GAMENAME}\${GAMENAME}.lnk" "$STEAMEXE" "-applaunch 243750 -game $\"C:\Program Files (x86)\Steam\steamapps\sourcemods\pf2$\"" "$INSTDIR\${GAMEDIR}\resource\game.ico" 0
+	!insertmacro MUI_STARTMENU_WRITE_END
 	
 		; Add uninstall information to Add/Remove Programs
 	WriteRegStr HKCU  "Software\Microsoft\Windows\CurrentVersion\Uninstall\${GAMEDIR}" \
@@ -216,9 +206,10 @@ Section "Uninstall"
 	; Delete only installer created files, leave user ones
 	!include "uninstall_list_${GAMEDIR}.txt"
 
-	;!insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
-	;Delete "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk"
-	;RMDir "$SMPROGRAMS\$StartMenuFolder"
+	!insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
+	Delete "$SMPROGRAMS\$StartMenuFolder\${GAMEDIR}.lnk"
+	Delete "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk"
+	RMDir "$SMPROGRAMS\$StartMenuFolder"
 
 	DeleteRegKey HKCU "SOFTWARE\${COMPANYNAME}\"
 	DeleteRegKey HKCU  "Software\Microsoft\Windows\CurrentVersion\Uninstall\${GAMEDIR}"
