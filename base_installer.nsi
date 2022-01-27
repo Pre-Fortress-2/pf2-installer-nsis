@@ -10,17 +10,22 @@
 
 ; --------------------------------
 ; General
-
+!if ${INCLUDE_GAME} == 1
+	!define ARCHIVENAME "${GAMEDIR}_full_${VERSION}.7z"
+	Name "${GAMENAME} ${VERSION}"
+	OutFile "${GAMEDIR}-${VERSION}-full-game.exe"
+!endif
 !if ${UPDATER} == 1
-!define ARCHIVENAME "${GAMEDIR}_patch_${PREVERSION}_to_${VERSION}.7z"
-Name "${GAMENAME} ${VERSION} Update"
-OutFile "${GAMEDIR}-${PREVERSION}-to-${VERSION}-update-installer.exe"
-!else
-!define ARCHIVENAME "${GAMEDIR}_full_${VERSION}.7z"
-Name "${GAMENAME} ${VERSION}"
-OutFile "${GAMEDIR}-${VERSION}-full-installer.exe"
-
-
+	!define ARCHIVENAME "${GAMEDIR}_patch_${PREVERSION}_to_${VERSION}.7z"
+	Name "${GAMENAME} ${VERSION} Update"
+	OutFile "${GAMEDIR}-${PREVERSION}-to-${VERSION}-updater.exe"
+!endif
+!if ${UPDATER} == 0
+	!if ${INCLUDE_GAME} == 0
+		!define ARCHIVENAME "${GAMEDIR}_full_${VERSION}.7z"
+		Name "${GAMENAME} ${VERSION}"
+		OutFile "${GAMEDIR}-${VERSION}-full-installer.exe"
+	!endif
 !endif
 
 Unicode True
@@ -93,37 +98,41 @@ Function getRegKeys
 	;MessageBox MB_OK $INSTDIR
 FunctionEnd
 
+; TODO cyanide fix this shit i cannot even compile this
 !if ${UPDATER} == 1
-; --------------------------------
-; try read version.txt in the game folder
-Function checkVer
-	IfFileExists $INSTDIR\${GAMENAME}\rev.txt VerExists
-		MessageBox MB_OK "${GAMENAME} is not currently installed on this machine.$\nPlease use the $\"full$\" installer"
-		Abort
-	VerExists:
-	;Read rev
-	FileOpen $4 "$INSTDIR\${GAMENAME}\rev.txt" r
-	FileRead $4 $1
-	FileClose $4 ; and close the file
-	${if} $1 < ${BASEREV}
-		MessageBox MB_OK "The version of ${GAMENAME} installed is too low.$\nPlease update to ${PREVERSION} before using this installer."
-		Abort
-	${elseif} $1 == ${UPDATEREV}
-		MessageBox MB_OK "This version of ${GAMENAME} already installed."
-	${endif}
-FunctionEnd
+	; --------------------------------
+	; try read version.txt in the game folder
+	Function checkVer
+		IfFileExists $INSTDIR\${GAMENAME}\rev.txt VerExists
+			MessageBox MB_OK "${GAMENAME} is not currently installed on this machine.$\nPlease use the $\"full$\" installer"
+			Abort
+		VerExists:
+		;Read rev
+		FileOpen $4 "$INSTDIR\${GAMENAME}\rev.txt" r
+		FileRead $4 $1
+		FileClose $4 ; and close the file
+		${if} $1 < ${BASEREV}
+			MessageBox MB_OK "The version of ${GAMENAME} installed is too low.$\nPlease update to ${PREVERSION} before using this installer."
+			Abort
+		${elseif} $1 == ${UPDATEREV}
+			MessageBox MB_OK "This version of ${GAMENAME} already installed."
+		${endif}
+	FunctionEnd
 !endif
 
 ; --------------------------------
 ; verify the 7z archive exists
 Function checkGameArchiveExists
+!if ${INCLUDE_GAME} == 0
 	IfFileExists "$EXEDIR\${ARCHIVENAME}" ArchiveExists
-!if ${VERSION} == 0.6
+	!if ${VERSION} == 0.6 
+		
 		IfFileExists "$EXEDIR\PF2-v06.7z" ArchiveExists
-!endif		
-			MessageBox MB_OK "${ARCHIVENAME} is missing. Please download it from ${WEBSITE}."
-			Abort
-	ArchiveExists:
+	!endif		
+				MessageBox MB_OK "${ARCHIVENAME} is missing. Please download it from ${WEBSITE}."
+				Abort
+		ArchiveExists:
+!endif
 FunctionEnd
 
 ; --------------------------------
@@ -150,22 +159,36 @@ FunctionEnd
 ; --------------------------------
 ; Installer Sections
 
-Section "Dummy Section" SecDummy
+Section "Global Install Settings" SecGlobeSet
 
-	SetOutPath "$INSTDIR"
-	
 	; Set game size
 	AddSize ${GAMESIZE}
-
-	; ADD YOUR OWN FILES HERE...
-	; File / r "files\${GAMEDIR}\*"
 
 	; Store installation folder
 	WriteRegStr HKCU "SOFTWARE\${COMPANYNAME}" "InstallationDirectory" $INSTDIR
 
-	; Extract the archive found in the same directory as the installer
-	Nsis7z::ExtractWithDetails "$EXEDIR\${ARCHIVENAME}" "Extracting files %s..."
+SectionEnd
 
+!if ${INCLUDE_GAME} == 1
+	Section "Full Game" SecFull
+		SetOutPath "$TEMP\PF2-Installer"
+		File "assets\${ARCHIVENAME}"
+		SetOutPath "$INSTDIR"
+		Nsis7z::ExtractWithDetails "$TEMP\PF2-Installer\${ARCHIVENAME}" "Extracting files %s..."
+		RMDir /r "$TEMP\PF2-Installer"
+	SectionEnd
+!endif
+!if ${INCLUDE_GAME} == 0
+	Section "Dummy Section" SecDummy
+		
+		SetOutPath "$INSTDIR"
+		
+		; Extract the archive found in the same directory as the installer
+		Nsis7z::ExtractWithDetails "$EXEDIR\${ARCHIVENAME}" "Extracting files %s..."
+	SectionEnd
+!endif
+
+Section "Uninstaller and Shortcuts" SecShort
 	; Create uninstaller
 	WriteUninstaller "$INSTDIR\${GAMEDIR}\Uninstall.exe"
 	
@@ -180,10 +203,13 @@ Section "Dummy Section" SecDummy
 	
 		; Add uninstall information to Add/Remove Programs
 	WriteRegStr HKCU  "Software\Microsoft\Windows\CurrentVersion\Uninstall\${GAMEDIR}" \
-                 "DisplayName" "${GAMENAME}"
+				"DisplayName" "${GAMENAME}"
 	WriteRegStr HKCU  "Software\Microsoft\Windows\CurrentVersion\Uninstall\${GAMEDIR}" \
-                 "UninstallString" "$\"$INSTDIR\${GAMEDIR}\Uninstall.exe$\""
-	
+				"UninstallString" "$\"$INSTDIR\${GAMEDIR}\Uninstall.exe$\""
+SectionEnd
+
+Section "Remind to restart steam" SecRestartSteam
+	MessageBox MB_OK "Thank you for installing Pre-Fortress 2.$\nPlease restart Steam if you haven't already"
 SectionEnd
 
 ; --------------------------------

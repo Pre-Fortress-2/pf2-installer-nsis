@@ -1,7 +1,7 @@
 ; --------------------------------
 ; defines
 !define UPDATER 0 ; Are we an updater or an installer
-!define INCLUDE_GAME 0 ; Are we including the game archive
+!define INCLUDE_GAME 1 ; Are we including the game archive
 
 !define VERSION "0.6" ; Installer version
 !define COMPANYNAME "PF2Team" ;  Used as the registry folder
