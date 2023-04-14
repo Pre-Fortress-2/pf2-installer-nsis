@@ -1,6 +1,6 @@
 # NSIS PF2 installer
 ## Requirements
- - NSIS 3.08 https://nsis.sourceforge.io/Download
+ - NSIS Big Installer 3.08 https://sourceforge.net/projects/nsisbi/
  - NSIS7z 19.00 https://nsis.sourceforge.io/Nsis7z_plug-in
 
 ## Setup
