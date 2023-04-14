@@ -22,6 +22,10 @@
 !endif
 !if ${UPDATER} == 0
 	!if ${INCLUDE_GAME} == 0
+		!if ${VERSION} == 0.7.1
+			!define PART01 ".001"
+			!define PART02 ".002"
+		!endif
 		!define ARCHIVENAME "${GAMEDIR}_full_${VERSION}.7z"
 		Name "${GAMENAME} ${VERSION}"
 		OutFile "${GAMEDIR}-${VERSION}-full-installer.exe"
@@ -124,12 +128,20 @@ FunctionEnd
 ; verify the 7z archive exists
 Function checkGameArchiveExists
 !if ${INCLUDE_GAME} == 0
-	IfFileExists "$EXEDIR\${ARCHIVENAME}" ArchiveExists
+	!if ${VERSION} == 0.7.1
+		IfFileExists "$EXEDIR\${ARCHIVENAME}${PART01}" part02
+	part02:
+		IfFileExists "$EXEDIR\${ARCHIVENAME}${PART02}" ArchiveExists
+	!endif
 	!if ${VERSION} == 0.6 
 		
 		IfFileExists "$EXEDIR\PF2-v06.7z" ArchiveExists
 	!endif		
-				MessageBox MB_OK "${ARCHIVENAME} is missing. Please download it from ${WEBSITE}."
+				!if ${VERSION} == 0.7.1
+					MessageBox MB_OK "Either ${ARCHIVENAME}${PART01} or ${ARCHIVENAME}${PART02} is missing. Please download it from ${WEBSITE}."
+				!else
+					MessageBox MB_OK "${ARCHIVENAME} is missing. Please download it from ${WEBSITE}."
+				!endif
 				Abort
 		ArchiveExists:
 !endif
