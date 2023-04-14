@@ -3,13 +3,13 @@
 !define UPDATER 0 ; Are we an updater or an installer
 !define INCLUDE_GAME 0 ; Are we including the game archive
 
-!define VERSION "0.7" ; Installer version
+!define VERSION "0.7.1" ; Installer version
 !define COMPANYNAME "PF2Team" ;  Used as the registry folder
 !define GAMENAME "Pre-Fortress 2" ; Installer game
 !define GAMEDIR "pf2"
 !define WEBSITE "prefortress.com"
 
-!define GAMESIZE 2533000 ; size of extracted archive in kb
+!define GAMESIZE 5820000 ; size of extracted archive in kb
 
 ; --------------------------------
 ; updater defines
