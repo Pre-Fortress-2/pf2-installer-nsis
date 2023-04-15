@@ -267,7 +267,6 @@ Section "Uninstall"
 
 	Delete "$INSTDIR\Uninstall.exe"
 	; Delete only installer created files, leave user ones
-	!include "uninstall_list_${GAMEDIR}.txt"
 
 	!insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
 	Delete "$SMPROGRAMS\$StartMenuFolder\${GAMEDIR}.lnk"
