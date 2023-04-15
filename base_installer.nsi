@@ -32,12 +32,14 @@
 		!define PART02 ".002"
 	!endif
 	!define ARCHIVENAME "${GAMEDIR}_full_${VERSION}.7z"
-	Name "${GAMENAME} ${VERSION}"
+	
 	
 	!if ${UPDATER} == 1
 		OutFile "${GAMEDIR}-${VERSION}-updater.exe"
+		Name "${GAMENAME} ${VERSION} Updater"
 	!else
 		OutFile "${GAMEDIR}-${VERSION}-full-installer.exe"
+		Name "${GAMENAME} ${VERSION}"
 	!endif
 	
 !endif
@@ -72,8 +74,21 @@ Var STEAMEXE
 
 ; --------------------------------
 ; Pages
+!if ${UPDATER} == 1
+!define MUI_PAGE_HEADER_TEXT "${GAMENAME} ${VERSION}"
+!define MUI_WELCOMEPAGE_TITLE "Welcome to the ${GAMENAME} ${VERSION} Updater"
+!define MUI_WELCOMEPAGE_TEXT  "This setup will guide you with updating your Pre-Fortress 2 ${PREVERSION} build to ${VERSION}.$\r$\n$\r$\nClick Next to continue."
+!define MUI_DIRECTORYPAGE_TEXT_TOP "This setup will update your ${GAMENAME} ${PREVERSION} build in the following folder. If your ${GAMENAME} ${PREVERSION} build is in another directory, click Browse and select another folder. Click Next to continue."
+!define MUI_PAGE_HEADER_SUBTEXT "Choose the folder where your ${GAMENAME} ${PREVERSION} build is located."
+
+!else
+!define MUI_WELCOMEPAGE_TEXT  "This setup will guide you with installing the Pre-Fortress 2 ${VERSION} build.$\r$\n$\r$\nClick Next to continue."
+!define MUI_DIRECTORYPAGE_TEXT_TOP "This setup will install the Pre-Fortress ${VERSION} build in the following folder. If you wish to install into another folder, click Browse and select another folder. Click Next to continue."
+!define MUI_PAGE_HEADER_SUBTEXT "Choose the folder where your ${GAMENAME} ${VERSION} build will be located."
+!endif
 
 !insertmacro MUI_PAGE_WELCOME
+
 ; !insertmacro MUI_PAGE_LICENSE "license.txt"
 ; !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
@@ -98,6 +113,11 @@ Var STEAMEXE
 !insertmacro MUI_LANGUAGE "English"
 
 ; --------------------------------
+; Misc things
+!include "FileFunc.nsh"
+!insertmacro GetParent
+
+; --------------------------------
 ; check for SourceModInstallPath
 Function getRegKeys
 	ClearErrors
@@ -113,11 +133,30 @@ Function getRegKeys
 	;MessageBox MB_OK $INSTDIR
 FunctionEnd
 
-; TODO cyanide fix this shit i cannot even compile this
+Section "Updater" secUpdater
 !if ${UPDATER} == 1
 	; --------------------------------
 	; Assume that this is 0.7 hotfix version. Delete all of the vpk files as our structure has changed
+	; Expect the pf2 folder to be the actual install dir
+	!if ${VERSION} == 0.7.1
+		MessageBox MB_OK "Warning! This updater will delete files. Be sure to back up any files in case anything happens!"
+			IfFileExists "$INSTDIR\*.*" PreUpdateDelete UpdateError
+		PreUpdateDelete:
+			RMDir /r $INSTDIR\scenes
+			Delete $INSTDIR\maps\cp_powerhouse.bsp
+			Delete $INSTDIR\pf2_misc_*.vpk
+			Delete $INSTDIR\custom\07hotfix_patch_*.vpk
+			Delete $INSTDIR\gameinfo.txt
+			goto FinishedUpdating
+				
+		UpdateError:
+			MessageBox MB_OK "${GAMENAME} is not installed in this folder.$\nPlease use the $\"full$\" installer"
+			Abort	
+		FinishedUpdating:
+	
+	!endif
 !endif
+SectionEnd
 
 ; --------------------------------
 ; verify the 7z archive exists
@@ -133,7 +172,7 @@ Function checkGameArchiveExists
 		IfFileExists "$EXEDIR\PF2-v06.7z" ArchiveExists
 	!endif		
 				!if ${VERSION} == 0.7.1
-					MessageBox MB_OK "Either ${ARCHIVENAME}${PART01} or ${ARCHIVENAME}${PART02} is missing. Please download it from ${WEBSITE}."
+					MessageBox MB_OK "Either ${ARCHIVENAME}${PART01} or ${ARCHIVENAME}${PART02} is missing. Please download them from ${WEBSITE}."
 				!else
 					MessageBox MB_OK "${ARCHIVENAME} is missing. Please download it from ${WEBSITE}."
 				!endif
@@ -187,41 +226,20 @@ SectionEnd
 !endif
 !if ${INCLUDE_GAME} == 0
 	Section "Dummy Section" SecDummy
-		
+	; Go back one as the pf2 folder was selected for the updater.
+	!if ${UPDATER} == 1
+		${GetParent} "$INSTDIR" $INSTDIR
+	!endif 
 		SetOutPath "$INSTDIR"
-		
-		!if ${UPDATER} == 1
-		Section "DeleteFilesWarning" SecDummy
-			MessageBox MB_OK "Warning! This updater will delete files."
-		SectionEnd
-			IfFileExists ${INSTDIR} StartUpdating UpdateError
-			StartUpdating:
-			Delete $INSTDIR\${GAMEDIR}\pf2_misc_*.vpk
-			Delete $INSTDIR\${GAMEDIR}\custom\07hotfix_patch_*.vpk
-			Delete $INSTDIR\${GAMEDIR}\gameinfo.txt
-			
-		!endif
-		
 
-		
-		; Extract the archive found in the same directory as the installer
+		; Extract the archive found in the same directory as the installer.
 		!if ${VERSION} == 0.7.1
-			Delete $INSTDIR\pf2\custom\07hotfix_patch_*.vpk
+			Delete $INSTDIR\custom\07hotfix_patch_*.vpk
 			Nsis7z::ExtractWithDetails "$EXEDIR\${ARCHIVENAME}${PART01}" "Extracting files %s..."
 		!else
 			Nsis7z::ExtractWithDetails "$EXEDIR\${ARCHIVENAME}" "Extracting files %s..."
 		!endif
-		
-		goto FinishUpdating
-		
-		
-		
-		UpdateError:
-			MessageBox MB_OK "${GAMENAME} is not currently installed on this machine.$\nPlease use the $\"full$\" installer"
-			Abort
-		
-		FinishUpdating:
-		
+
 	SectionEnd
 !endif
 
@@ -246,7 +264,12 @@ Section "Uninstaller and Shortcuts" SecShort
 SectionEnd
 
 Section "Remind to restart steam" SecRestartSteam
-	MessageBox MB_OK "Thank you for installing Pre-Fortress 2.$\nPlease restart Steam if you haven't already"
+!if ${UPDATER} == 1
+	MessageBox MB_OK "Thank you for updating Pre-Fortress 2.$\nEnjoy!"
+!else
+	MessageBox MB_OK "Thank you for installing Pre-Fortress 2.$\nPlease restart Steam."
+!endif
+	
 SectionEnd
 
 ; --------------------------------
@@ -267,6 +290,7 @@ Section "Uninstall"
 
 	Delete "$INSTDIR\Uninstall.exe"
 	; Delete only installer created files, leave user ones
+	;!include "uninstall_list_${GAMEDIR}.txt"
 
 	!insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
 	Delete "$SMPROGRAMS\$StartMenuFolder\${GAMEDIR}.lnk"
@@ -276,9 +300,24 @@ Section "Uninstall"
 	DeleteRegKey HKCU "SOFTWARE\${COMPANYNAME}\"
 	DeleteRegKey HKCU  "Software\Microsoft\Windows\CurrentVersion\Uninstall\${GAMEDIR}"
 	
-	IfFileExists "$INSTDIR" 0 NoDelete
-		MessageBox MB_YESNO|MB_ICONQUESTION "Would you like to remove the mod folder and all user generated files such as demos and screenshots?" IDNO NoDelete
+	IfFileExists "$INSTDIR" 0 DeleteModFolderNotCFG
+		MessageBox MB_YESNO|MB_ICONQUESTION "Would you like to leave your config files and custom folder?" IDYES DeleteModFolderNotCFG
 			RMDir /r "$INSTDIR"
-	NoDelete:
-
+			goto FinishedDeletion
+	DeleteModFolderNotCFG:
+			RMDir /r "$INSTDIR\bin"
+			RMDir /r "$INSTDIR\maps"
+			RMDir /r "$INSTDIR\media"
+			RMDir /r "$INSTDIR\resource"
+			RMDir /r "$INSTDIR\scenes"
+			RMDir /r "$INSTDIR\scripts"
+			Delete "$INSTDIR\pf2_misc_*"
+			Delete "$INSTDIR\pf2_models_*"
+			Delete "$INSTDIR\pf2_scripts_*"
+			Delete "$INSTDIR\pf2_sound_*"
+			Delete "$INSTDIR\pf2_textures_*"
+			Delete "$INSTDIR\steam.inf"
+			Delete "$INSTDIR\pf2.fgd"
+			Delete "$INSTDIR\gameinfo.txt"
+	FinishedDeletion:
 SectionEnd
