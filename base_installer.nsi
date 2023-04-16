@@ -7,6 +7,7 @@
 
 !include "MUI2.nsh"
 !include "strreplace.nsh"
+!include "strcontains.nsh"
 
 ; --------------------------------
 ; General
@@ -138,9 +139,19 @@ Section "Updater" secUpdater
 	; --------------------------------
 	; Assume that this is 0.7 hotfix version. Delete all of the vpk files as our structure has changed
 	; Expect the pf2 folder to be the actual install dir
+	!define PF2Folder ""
+	
 	!if ${VERSION} == 0.7.1
-		MessageBox MB_OK "Warning! This updater will delete files. Be sure to back up any files in case anything happens!"
-			IfFileExists "$INSTDIR\*.*" PreUpdateDelete UpdateError
+		; Look if this folder is a pf2 build folder. If not, cancel the update.
+		Push "$INSTDIR"
+		Push "\pf2"
+		Call StrContains
+		Pop $0 
+		StrCmp $0 "" PF2BuildNotFound
+			
+		MessageBox MB_OK "Warning! This updater will delete files. Be sure to back up any files in case anything happens!"	
+		IfFileExists "$INSTDIR" PreUpdateDelete UpdateError
+	
 		PreUpdateDelete:
 			RMDir /r $INSTDIR\scenes
 			Delete $INSTDIR\maps\cp_powerhouse.bsp
@@ -152,6 +163,11 @@ Section "Updater" secUpdater
 		UpdateError:
 			MessageBox MB_OK "${GAMENAME} is not installed in this folder.$\nPlease use the $\"full$\" installer"
 			Abort	
+		
+		PF2BuildNotFound:
+			MessageBox MB_OK "This directory is not a pf2 build folder! Relaunch the updater again and select a pf2 folder to update!"
+			Abort
+			
 		FinishedUpdating:
 	
 	!endif
@@ -231,7 +247,6 @@ SectionEnd
 		${GetParent} "$INSTDIR" $INSTDIR
 	!endif 
 		SetOutPath "$INSTDIR"
-
 		; Extract the archive found in the same directory as the installer.
 		!if ${VERSION} == 0.7.1
 			Delete $INSTDIR\custom\07hotfix_patch_*.vpk
@@ -305,6 +320,7 @@ Section "Uninstall"
 			RMDir /r "$INSTDIR"
 			goto FinishedDeletion
 	DeleteModFolderNotCFG:
+			; lol fuck uninstall_list.txt
 			RMDir /r "$INSTDIR\bin"
 			RMDir /r "$INSTDIR\maps"
 			RMDir /r "$INSTDIR\media"
