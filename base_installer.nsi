@@ -18,7 +18,7 @@
 !endif
 ;!if ${UPDATER} == 1
 ;
-;	!if ${VERSION} == 0.7.1
+;	!if ${VERSION} == 0.7.2
 ;		!define PART01 ".001"
 ;		!define PART02 ".002"
 ;	!endif
@@ -28,7 +28,7 @@
 ;!endif
 ;!if ${UPDATER} == 0
 !if ${INCLUDE_GAME} == 0
-	!if ${VERSION} == 0.7.1
+	!if ${VERSION} == 0.7.2
 		!define PART01 ".001"
 		!define PART02 ".002"
 	!endif
@@ -141,7 +141,7 @@ Section "Updater" secUpdater
 	; Expect the pf2 folder to be the actual install dir
 	!define PF2Folder ""
 	
-	!if ${VERSION} == 0.7.1
+	!if ${VERSION} == 0.7.2
 		; Look if this folder is a pf2 build folder. If not, cancel the update.
 		Push "$INSTDIR"
 		Push "\pf2"
@@ -178,7 +178,7 @@ SectionEnd
 ; verify the 7z archive exists
 Function checkGameArchiveExists
 !if ${INCLUDE_GAME} == 0
-	!if ${VERSION} == 0.7.1
+	!if ${VERSION} == 0.7.2
 		IfFileExists "$EXEDIR\${ARCHIVENAME}${PART01}" part02
 	part02:
 		IfFileExists "$EXEDIR\${ARCHIVENAME}${PART02}" ArchiveExists
@@ -187,7 +187,7 @@ Function checkGameArchiveExists
 		
 		IfFileExists "$EXEDIR\PF2-v06.7z" ArchiveExists
 	!endif		
-				!if ${VERSION} == 0.7.1
+				!if ${VERSION} == 0.7.2
 					MessageBox MB_OK "Either ${ARCHIVENAME}${PART01} or ${ARCHIVENAME}${PART02} is missing. Please download them from ${WEBSITE}."
 				!else
 					MessageBox MB_OK "${ARCHIVENAME} is missing. Please download it from ${WEBSITE}."
@@ -248,7 +248,7 @@ SectionEnd
 	!endif 
 		SetOutPath "$INSTDIR"
 		; Extract the archive found in the same directory as the installer.
-		!if ${VERSION} == 0.7.1
+		!if ${VERSION} == 0.7.2
 			Delete $INSTDIR\custom\07hotfix_patch_*.vpk
 			Nsis7z::ExtractWithDetails "$EXEDIR\${ARCHIVENAME}${PART01}" "Extracting files %s..."
 		!else
