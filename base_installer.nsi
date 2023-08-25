@@ -90,7 +90,7 @@ Var STEAMEXE
 
 !insertmacro MUI_PAGE_WELCOME
 
-; !insertmacro MUI_PAGE_LICENSE "license.txt"
+!insertmacro MUI_PAGE_LICENSE "license.txt"
 ; !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 
@@ -129,7 +129,11 @@ Function getRegKeys
 		Abort
 	${Else}
 		${StrRep} '$STEAMEXE' '$0' '/' '\'
-		StrCpy $INSTDIR "$1\"
+		${If} ${UPDATER} == 1
+			StrCpy $INSTDIR "$1\pf2"
+		${Else}
+			StrCpy $INSTDIR "$1\"
+		${EndIf}
 	${EndIf}
 	;MessageBox MB_OK $INSTDIR
 FunctionEnd
@@ -195,6 +199,7 @@ Function checkGameArchiveExists
 				Abort
 		ArchiveExists:
 !endif
+
 FunctionEnd
 
 ; --------------------------------
@@ -243,9 +248,10 @@ SectionEnd
 !if ${INCLUDE_GAME} == 0
 	Section "Dummy Section" SecDummy
 	; Go back one as the pf2 folder was selected for the updater.
-	!if ${UPDATER} == 1
-		${GetParent} "$INSTDIR" $INSTDIR
-	!endif 
+
+		!if ${UPDATER} == 1
+			${GetParent} "$INSTDIR" $INSTDIR
+		!endif 
 		SetOutPath "$INSTDIR"
 		; Extract the archive found in the same directory as the installer.
 		!if ${VERSION} == 0.7.2
@@ -320,7 +326,6 @@ Section "Uninstall"
 			RMDir /r "$INSTDIR"
 			goto FinishedDeletion
 	DeleteModFolderNotCFG:
-			; lol fuck uninstall_list.txt
 			RMDir /r "$INSTDIR\bin"
 			RMDir /r "$INSTDIR\maps"
 			RMDir /r "$INSTDIR\media"
